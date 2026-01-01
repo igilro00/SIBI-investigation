@@ -5,7 +5,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-
 class Neo4jDatabase:
     """Maneja todas las operaciones con la base de datos Neo4j"""
     
@@ -16,6 +15,7 @@ class Neo4jDatabase:
                 auth=(NEO4J_USER, NEO4J_PASSWORD),
                 max_connection_lifetime=3600
             )
+            
             # Test de conexión
             with self.driver.session() as session:
                 session.run("RETURN 1")
@@ -31,21 +31,21 @@ class Neo4jDatabase:
     
     # ==================== FILTROS DE BÚSQUEDA ====================
     
-    def get_car_by_preferences(self, marca=None, rango_precio=None, 
-                               tipo_carroceria=None, tipo_motor=None,
-                               traccion=None, uso_deportivo=None, 
-                               uso_eco=None, uso_familiar=None,
-                               uso_lujo=None, uso_offroad=None,
-                               uso_urbano=None, uso_viajes_largos=None):
+    def get_car_by_preferences(self, marca=None, rango_precio=None,
+                                tipo_carroceria=None, tipo_motor=None,
+                                traccion=None, uso_deportivo=None,
+                                uso_eco=None, uso_familiar=None,
+                                uso_lujo=None, uso_offroad=None,
+                                uso_urbano=None, uso_viajes_largos=None):
         """
         Obtiene coches según múltiples criterios de preferencia.
         Usa todas las relaciones y nodos de la BD.
         """
-        
         query = """
         MATCH (m:MODELO)
         WHERE 1=1
         """
+        
         params = {}
         
         # Filtro por marca
@@ -76,22 +76,16 @@ class Neo4jDatabase:
         # Filtros por uso (relaciones APTO_PARA)
         if uso_deportivo:
             query += " AND (m)-[:APTO_PARA]->(:USO_DEPORTIVO)"
-            
         if uso_eco:
             query += " AND (m)-[:APTO_PARA]->(:USO_ECO)"
-            
         if uso_familiar:
             query += " AND (m)-[:APTO_PARA]->(:USO_FAMILIAR)"
-            
         if uso_lujo:
             query += " AND (m)-[:APTO_PARA]->(:USO_LUJO)"
-            
         if uso_offroad:
             query += " AND (m)-[:APTO_PARA]->(:USO_OFFROAD)"
-            
         if uso_urbano:
             query += " AND (m)-[:APTO_PARA]->(:USO_URBANO)"
-            
         if uso_viajes_largos:
             query += " AND (m)-[:APTO_PARA]->(:USO_VIAJES_LARGOS)"
         
@@ -110,7 +104,6 @@ class Neo4jDatabase:
     def get_all_marcas(self):
         """Obtiene todas las marcas disponibles"""
         query = "MATCH (m:MARCA) RETURN m.name as name ORDER BY name"
-        
         try:
             with self.driver.session() as session:
                 result = session.run(query)
@@ -122,11 +115,10 @@ class Neo4jDatabase:
     def get_all_rangos_precio(self):
         """Obtiene todos los rangos de precio ordenados"""
         query = """
-        MATCH (r:RANGO_PRECIO) 
+        MATCH (r:RANGO_PRECIO)
         RETURN r.name as name, r.min as min_price
         ORDER BY r.min ASC
         """
-        
         try:
             with self.driver.session() as session:
                 result = session.run(query)
@@ -138,7 +130,6 @@ class Neo4jDatabase:
     def get_all_tipos_carroceria(self):
         """Obtiene todos los tipos de carrocería"""
         query = "MATCH (t:TIPO_CARROCERIA) RETURN t.name as name ORDER BY name"
-        
         try:
             with self.driver.session() as session:
                 result = session.run(query)
@@ -150,7 +141,6 @@ class Neo4jDatabase:
     def get_all_tipos_motor(self):
         """Obtiene todos los tipos de motor"""
         query = "MATCH (t:TIPO_MOTOR) RETURN t.name as name ORDER BY name"
-        
         try:
             with self.driver.session() as session:
                 result = session.run(query)
@@ -162,7 +152,6 @@ class Neo4jDatabase:
     def get_all_tracciones(self):
         """Obtiene todos los tipos de tracción"""
         query = "MATCH (t:TRACCION) RETURN t.name as name ORDER BY name"
-        
         try:
             with self.driver.session() as session:
                 result = session.run(query)
@@ -184,19 +173,17 @@ class Neo4jDatabase:
         OPTIONAL MATCH (m)-[:TIPO_TRACCION]->(traccion:TRACCION)
         OPTIONAL MATCH (m)-[:APTO_PARA]->(uso)
         RETURN m as modelo,
-               marca,
-               rango,
-               carroceria,
-               motor,
-               traccion,
-               collect(DISTINCT labels(uso)[0]) as usos_disponibles
+            marca,
+            rango,
+            carroceria,
+            motor,
+            traccion,
+            collect(DISTINCT labels(uso)[0]) as usos_disponibles
         """
-        
         try:
             with self.driver.session() as session:
                 result = session.run(query, {'name': modelo_name})
                 record = result.single()
-                
                 if record:
                     return {
                         'modelo': record['modelo'],
@@ -220,22 +207,57 @@ class Neo4jDatabase:
         - Relación COMPITE_CON (competencia directa)
         - Mismo rango de precio
         - Misma carrocería
+        
+        Ahora soporta búsqueda flexible (parcial).
+        Ejemplo: "Golf" encontrará "Golf 2.0", "Golf GTI", etc.
         """
+        # Primero, intenta búsqueda exacta
+        query_exact = """
+        MATCH (m1:MODELO {name: $name})
+        RETURN m1 as modelo
+        LIMIT 1
+        """
+        
+        try:
+            with self.driver.session() as session:
+                result = session.run(query_exact, {'name': modelo_name})
+                found = result.single()
+                
+                # Si no encontró exacto, busca por CONTAINS (case-insensitive)
+                if not found:
+                    query_partial = """
+                    MATCH (m1:MODELO)
+                    WHERE toLower(m1.name) CONTAINS toLower($name)
+                    RETURN m1 as modelo
+                    LIMIT 1
+                    """
+                    result = session.run(query_partial, {'name': modelo_name})
+                    found = result.single()
+                
+                if not found:
+                    return []
+                
+                # Obtener el nombre exacto del modelo encontrado
+                modelo_encontrado = found['modelo']
+                modelo_name = modelo_encontrado['name']
+        
+        except Exception as e:
+            logger.error(f"Error encontrando modelo: {str(e)}")
+            return []
+        
+        # Ahora busca similares del modelo encontrado
         query = """
         MATCH (m1:MODELO {name: $name})
         OPTIONAL MATCH (m1)-[comp:COMPITE_CON]-(m2:MODELO)
         OPTIONAL MATCH (m1)-[:EN_RANGO]->(rango:RANGO_PRECIO)<-[:EN_RANGO]-(m3:MODELO)
         OPTIONAL MATCH (m1)-[:ES_TIPO]->(carroceria:TIPO_CARROCERIA)<-[:ES_TIPO]-(m4:MODELO)
-        
-        WITH DISTINCT 
-             CASE 
-                 WHEN m2 IS NOT NULL THEN m2
-                 WHEN m3 IS NOT NULL THEN m3
-                 WHEN m4 IS NOT NULL THEN m4
-             END as similar_modelo
-        
-        WHERE similar_modelo IS NOT NULL
-        
+        WITH DISTINCT
+        CASE
+            WHEN m2 IS NOT NULL THEN m2
+            WHEN m3 IS NOT NULL THEN m3
+            WHEN m4 IS NOT NULL THEN m4
+        END as similar_modelo
+        WHERE similar_modelo IS NOT NULL AND similar_modelo.name <> $name
         RETURN similar_modelo
         LIMIT 8
         """
@@ -248,6 +270,48 @@ class Neo4jDatabase:
             logger.error(f"Error obteniendo similares: {str(e)}")
             return []
     
+    def search_models_by_partial_name(self, search_term):
+        """
+        Busca modelos que contengan el término (búsqueda flexible).
+        Retorna lista de nombres que coinciden.
+        
+        Ejemplo: "Golf" encuentra ["Golf 1.4", "Golf 2.0", "Golf GTI"]
+        """
+        if not search_term or len(search_term) < 1:
+            return []
+        
+        query = """
+        MATCH (m:MODELO)
+        WHERE toLower(m.name) CONTAINS toLower($term)
+        RETURN DISTINCT m.name as nombre
+        ORDER BY m.name
+        """
+        try:
+            with self.driver.session() as session:
+                result = session.run(query, {'term': search_term})
+                return [record['nombre'] for record in result]
+        except Exception as e:
+            logger.error(f"Error buscando modelos: {str(e)}")
+            return []
+    
+    def get_all_model_names(self):
+        """
+        Obtiene TODOS los nombres de modelos disponibles (para autocomplete).
+        Retorna lista ordenada de nombres.
+        """
+        query = """
+        MATCH (m:MODELO)
+        RETURN DISTINCT m.name as nombre
+        ORDER BY m.name
+        """
+        try:
+            with self.driver.session() as session:
+                result = session.run(query)
+                return [record['nombre'] for record in result]
+        except Exception as e:
+            logger.error(f"Error obteniendo modelos: {str(e)}")
+            return []
+    
     def get_competing_cars(self, modelo_name):
         """Obtiene coches que compiten directamente (COMPITE_CON)"""
         query = """
@@ -255,7 +319,6 @@ class Neo4jDatabase:
         RETURN m2 as modelo, type(rel) as relacion
         LIMIT 10
         """
-        
         try:
             with self.driver.session() as session:
                 result = session.run(query, {'name': modelo_name})
@@ -270,9 +333,8 @@ class Neo4jDatabase:
         """
         Obtiene coches ideales para un uso específico.
         Usa relación IDEAL_PARA o APTO_PARA según uso_type.
-        
         uso_type puede ser:
-        - USO_DEPORTIVO, USO_ECO, USO_FAMILIAR, USO_LUJO, 
+        - USO_DEPORTIVO, USO_ECO, USO_FAMILIAR, USO_LUJO,
         - USO_OFFROAD, USO_URBANO, USO_VIAJES_LARGOS
         """
         query = f"""
@@ -281,7 +343,6 @@ class Neo4jDatabase:
         ORDER BY m.score_deportivo DESC
         LIMIT 10
         """
-        
         try:
             with self.driver.session() as session:
                 result = session.run(query)
@@ -324,11 +385,10 @@ class Neo4jDatabase:
         """Obtiene estadísticas de la base de datos"""
         query = """
         MATCH (n)
-        RETURN 
-            COUNT(DISTINCT n) as total_nodos,
-            COUNT(DISTINCT labels(n)[0]) as tipos_nodos
+        RETURN
+        COUNT(DISTINCT n) as total_nodos,
+        COUNT(DISTINCT labels(n)[0]) as tipos_nodos
         """
-        
         try:
             with self.driver.session() as session:
                 result = session.run(query)
@@ -349,7 +409,6 @@ class Neo4jDatabase:
         RETURN m as modelo
         ORDER BY m.precio ASC
         """
-        
         try:
             with self.driver.session() as session:
                 result = session.run(query, {'min': min_price, 'max': max_price})
@@ -366,7 +425,6 @@ class Neo4jDatabase:
         ORDER BY m.score DESC
         LIMIT $limit
         """
-        
         try:
             with self.driver.session() as session:
                 result = session.run(query, {'limit': limit})
