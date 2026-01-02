@@ -1,5 +1,3 @@
-
-
 """
 Configuración centralizada de la aplicación
 Cargar desde .env o usar valores por defecto
@@ -14,6 +12,7 @@ load_dotenv()
 # ============================================================================
 # NEO4J CONFIGURATION
 # ============================================================================
+
 NEO4J = {
     "uri": os.getenv("NEO4J_URI", "bolt://localhost:7687"),
     "user": os.getenv("NEO4J_USER", "neo4j"),
@@ -23,6 +22,7 @@ NEO4J = {
 # ============================================================================
 # OLLAMA CONFIGURATION
 # ============================================================================
+
 OLLAMA = {
     "base_url": os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
     "model": os.getenv("OLLAMA_MODEL", "mistral"),
@@ -34,6 +34,7 @@ OLLAMA = {
 # ============================================================================
 # STREAMLIT CONFIGURATION
 # ============================================================================
+
 STREAMLIT = {
     "page_title": "🚗 Car Recommender RAG",
     "page_icon": "🚗",
@@ -44,6 +45,7 @@ STREAMLIT = {
 # ============================================================================
 # MEMORY CONFIGURATION
 # ============================================================================
+
 MEMORY = {
     "max_messages": int(os.getenv("MAX_MESSAGES", "20")),
     "max_filters_history": int(os.getenv("MAX_FILTERS_HISTORY", "5")),
@@ -52,6 +54,7 @@ MEMORY = {
 # ============================================================================
 # RECOMMENDER CONFIGURATION
 # ============================================================================
+
 RECOMMENDER = {
     "top_k_results": int(os.getenv("TOP_K_RESULTS", "5")),
     "min_price": int(os.getenv("MIN_PRICE", "15000")),
@@ -65,6 +68,7 @@ RECOMMENDER = {
 # ============================================================================
 # DEFAULT FILTERS
 # ============================================================================
+
 DEFAULT_FILTERS = {
     "precio_min": RECOMMENDER["min_price"],
     "precio_max": RECOMMENDER["max_price"],
@@ -78,32 +82,42 @@ DEFAULT_FILTERS = {
 # ============================================================================
 # VEHICLE TYPES
 # ============================================================================
-VEHICLE_TYPES = [
-    "Compacto",
-    "Sedán",
-    "SUV",
-    "Coupé",
-    "Convertible",
-    "Monovolumen",
-    "Familiar",
-    "Pickup",
-    "Monoespacial",
-]
+
+VEHICLE_TYPES = {
+    "Compacto": ["compacto", "hatchback", "segmento C"],
+    "SUV Coupé": ["suv coupé","suv coupe","suv"],
+    "SUV": ["suv","todocamino","todoterreno","awd","4*4"],
+    "Cabrio": ["cabrio", "convertible", "cabriolet", "roadster", "descapotable", "spyder"],
+    "Familiar": ["familiar", "touring", "wagon"],
+    "Berlina": ["berlina", "sedan", "sedán"],
+    "Coupé": ["coupe", "coupé", "fastback", "dos puertas"],
+    "SUV Compacto": ["suv compacto", "compacto suv"],
+    "Monovolumen": ["monovolumen", "minivan"],
+    "Deportivo": ["deportivo", "sport", "racing"],
+    "SUV Deportivo": ["deportivo suv", "suv deportivo"],
+    "Furgoneta": ["furgo", "van", "furgoneta"],
+    "Crossover": ["crossover", "cuv"]    
+
+}
 
 # ============================================================================
 # MOTOR TYPES
 # ============================================================================
-MOTOR_TYPES = [
-    "Gasolina",
-    "Diésel",
-    "Híbrido",
-    "Híbrido Enchufable",
-    "Eléctrico",
-]
+
+MOTOR_TYPES = {
+    "Gasolina": ["gasolina"],
+    "Diésel": ["diesel", "diésel", "gasoil"],
+    "Híbrido": ["hibrido", "híbrido", "hybrid"],
+    "Híbrido Enchufable": ["hibrido enchufable", "híbrido enchufable", "plug-in hybrid"],
+    "Eléctrico": ["electrico", "eléctrico", "cero emisiones", "100% electrico", "100% eléctrico"]
+}
+    
+
 
 # ============================================================================
 # SCORE TYPES
 # ============================================================================
+
 SCORE_TYPES = [
     "score_eco",
     "score_urbano",
@@ -114,22 +128,60 @@ SCORE_TYPES = [
 ]
 
 # ============================================================================
-# TOPIC KEYWORDS
+# TOPIC KEYWORDS (USO, ESTILO, LUJO, ECONÓMICO…)
 # ============================================================================
+
 TOPICS = {
-    "eco": ["eco", "sostenible", "verde", "electrico", "hibrido", "ambiente", "emision"],
-    "deportivo": ["deportivo", "rapido", "performance", "potencia", "cv", "aceleracion", "adrenalina"],
-    "familiar": ["familia", "familiar", "espacio", "grande", "asientos", "maletero", "niños"],
-    "urbano": ["ciudad", "urbano", "compacto", "pequeño", "estacionamiento", "maniobrabilidad"],
-    "viajes": ["viajes", "carretera", "largo", "autonomia", "consumo", "paradas"],
-    "offroad": ["offroad", "4x4", "awd", "todoterreno", "campo", "aventura", "montaña", "nieve"],
-    "lujo": ["lujo", "premium", "confort", "cuero", "tecnologia", "luces", "infotainment"],
-    "economico": ["economico", "barato", "precio", "presupuesto", "ahorrar", "gasto","bajo"],
+    "eco": [
+        "eco", "sostenible", "verde",
+        "electrico", "eléctrico", "hibrido", "híbrido",
+        "ambiente", "emision", "emisión",
+    ],
+    "deportivo": [
+        "deportivo", "sport",
+        "rapido", "rápido",
+        "performance", "potencia", "cv",
+        "aceleracion", "aceleración", "adrenalina",
+    ],
+    "familiar": [
+        "familia", "familiar", "niños", "ninos",
+        "espacio", "grande", "asientos", "maletero",
+        "sillas infantiles",
+    ],
+    "urbano": [
+        "ciudad", "urbano",
+        "compacto", "pequeño", "pequeno",
+        "estacionamiento", "maniobrabilidad",
+        "atascos", "trayectos cortos",
+    ],
+    "viajes": [
+        "viajes", "carretera", "largo recorrido",
+        "autonomia", "autonomía",
+        "consumo", "paradas", "vacaciones",
+    ],
+    "offroad": [
+        "offroad", "4x4", "awd", "todoterreno",
+        "campo", "aventura",
+        "montaña", "montana", "nieve", "pistas",
+    ],
+    "lujo": [
+        "lujo", "premium", "alta gama", "tope de gama",
+        "acabados", "cuero", "asientos",
+        "masaje", "tecnologia", "tecnología",
+        "infotainment", "luces matriciales",
+    ],
+    "economico": [
+        "economico", "económico",
+        "barato", "precio bajo",
+        "presupuesto ajustado",
+        "ahorrar", "gasto bajo",
+    ],
 }
 
 # ============================================================================
 # LOGGING CONFIGURATION
 # ============================================================================
+
 LOGGING = {
     "level": os.getenv("LOG_LEVEL", "INFO"),
     "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -138,17 +190,18 @@ LOGGING = {
 # ============================================================================
 # VALIDATION
 # ============================================================================
+
 def validate_config():
     """
     Validar que la configuración sea correcta
     """
     try:
         # Intentar importar dependencias críticas
-        import neo4j
-        import streamlit
-        import ollama
-        from llama_index.llms.ollama import Ollama
-        
+        import neo4j  # noqa
+        import streamlit  # noqa
+        import ollama  # noqa
+        from llama_index.llms.ollama import Ollama  # noqa
+
         return True
     except ImportError as e:
         print(f"❌ Error: Dependencia faltante: {e}")
@@ -159,17 +212,5 @@ if __name__ == "__main__":
     print("=" * 60)
     print("🔧 CONFIGURACIÓN DE LA APLICACIÓN")
     print("=" * 60)
-    
-    print("\n📊 NEO4J:")
-    for key, value in NEO4J.items():
-        print(f"  {key}: {value}")
-    
-    print("\n🤖 OLLAMA:")
-    for key, value in OLLAMA.items():
-        print(f"  {key}: {value}")
-    
-    print("\n📈 RECOMMENDER:")
-    for key, value in RECOMMENDER.items():
-        print(f"  {key}: {value}")
-    
-    print("\n✅ Configuración cargada correctamente")
+
+    p
